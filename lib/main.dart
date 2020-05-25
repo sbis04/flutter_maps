@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() {
@@ -25,10 +26,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final CameraPosition _initialLocation = CameraPosition(
-    target: LatLng(100, 100),
+  CameraPosition _initialLocation = CameraPosition(
+    target: LatLng(0.0, 0.0),
   );
   GoogleMapController mapController;
+  final Geolocator _geolocator = Geolocator();
+  Position _currentPosition;
 
   Widget _textField(String label, String hint, double width) {
     return Container(
@@ -64,6 +67,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Method for retrieving the current location
+  _getCurrentLocation() async {
+    await _geolocator
+        .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+        .then((Position position) {
+      setState(() {
+        _currentPosition = position;
+        mapController.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+              zoom: 18.0,
+            ),
+          ),
+        );
+      });
+    }).catchError((e) {
+      print(e);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
@@ -75,6 +105,22 @@ class _HomePageState extends State<HomePage> {
         body: Stack(
           children: <Widget>[
             GoogleMap(
+              markers: _currentPosition != null
+                  ? Set<Marker>.from([
+                      Marker(
+                        markerId: MarkerId('$_currentPosition'),
+                        position: LatLng(
+                          _currentPosition.latitude,
+                          _currentPosition.longitude,
+                        ),
+                        infoWindow: InfoWindow(
+                          title: 'Current Location',
+                          snippet: 'Home',
+                        ),
+                        icon: BitmapDescriptor.defaultMarker,
+                      ),
+                    ])
+                  : null,
               initialCameraPosition: _initialLocation,
               myLocationEnabled: false,
               myLocationButtonEnabled: false,
