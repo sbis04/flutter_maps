@@ -36,6 +36,10 @@ class _HomePageState extends State<HomePage> {
   final startAddressController = TextEditingController();
   final destinationAddressController = TextEditingController();
 
+  String _startAddress;
+  String _destinationAddress;
+  double _placeDistance;
+
   Widget _textField({
     TextEditingController controller,
     String label,
@@ -43,11 +47,14 @@ class _HomePageState extends State<HomePage> {
     String initialValue,
     double width,
     Icon icon,
+    Function(String) locationCallback,
   }) {
     return Container(
       width: width * 0.8,
       child: TextFormField(
-        onChanged: (value) {},
+        onChanged: (value) {
+          locationCallback(value);
+        },
         controller: controller,
         // initialValue: initialValue,
         decoration: new InputDecoration(
@@ -87,6 +94,7 @@ class _HomePageState extends State<HomePage> {
         .then((Position position) async {
       setState(() {
         _currentPosition = position;
+        print('CURRENT POS: $_currentAddress');
         mapController.animateCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(
@@ -114,6 +122,33 @@ class _HomePageState extends State<HomePage> {
         _currentAddress =
             "${place.name}, ${place.locality}, ${place.postalCode}, ${place.country}";
         startAddressController.text = _currentAddress;
+        _startAddress = _currentAddress;
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  _calculateDistance() async {
+    try {
+      List<Placemark> startPlacemark =
+          await _geolocator.placemarkFromAddress(_startAddress);
+      List<Placemark> destinationPlacemark =
+          await _geolocator.placemarkFromAddress(_destinationAddress);
+
+      Position startCoordinates = startPlacemark[0].position;
+      Position destinationCoordinates = destinationPlacemark[0].position;
+
+      double distanceInMeters = await Geolocator().distanceBetween(
+        startCoordinates.latitude,
+        startCoordinates.longitude,
+        destinationCoordinates.latitude,
+        destinationCoordinates.longitude,
+      );
+
+      setState(() {
+        _placeDistance = distanceInMeters;
+        print('DISTANCE: $_placeDistance');
       });
     } catch (e) {
       print(e);
@@ -232,33 +267,43 @@ class _HomePageState extends State<HomePage> {
                         ),
                         SizedBox(height: 10),
                         _textField(
-                          label: 'Start',
-                          hint: 'Choose starting point',
-                          initialValue: _currentAddress,
-                          icon: Icon(Icons.looks_one),
-                          controller: startAddressController,
-                          width: width,
-                        ),
+                            label: 'Start',
+                            hint: 'Choose starting point',
+                            initialValue: _currentAddress,
+                            icon: Icon(Icons.looks_one),
+                            controller: startAddressController,
+                            width: width,
+                            locationCallback: (String value) {
+                              setState(() {
+                                _startAddress = value;
+                              });
+                            }),
                         SizedBox(height: 10),
                         _textField(
-                          label: 'Destination',
-                          hint: 'Choose destination',
-                          initialValue: '',
-                          icon: Icon(Icons.looks_two),
-                          controller: destinationAddressController,
-                          width: width,
-                        ),
+                            label: 'Destination',
+                            hint: 'Choose destination',
+                            initialValue: '',
+                            icon: Icon(Icons.looks_two),
+                            controller: destinationAddressController,
+                            width: width,
+                            locationCallback: (String value) {
+                              setState(() {
+                                _destinationAddress = value;
+                              });
+                            }),
                         SizedBox(height: 10),
                         RaisedButton(
-                          onPressed: () {},
+                          onPressed: () async {
+                            _calculateDistance();
+                          },
                           color: Colors.red,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.0),
+                            borderRadius: BorderRadius.circular(20.0),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              'SET MARKER',
+                              'Calculate Distance'.toUpperCase(),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 20.0,
