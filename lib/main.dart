@@ -26,19 +26,32 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  CameraPosition _initialLocation = CameraPosition(
-    target: LatLng(0.0, 0.0),
-  );
+  CameraPosition _initialLocation = CameraPosition(target: LatLng(0.0, 0.0));
   GoogleMapController mapController;
+
   final Geolocator _geolocator = Geolocator();
   Position _currentPosition;
+  String _currentAddress;
 
-  Widget _textField(String label, String hint, double width) {
+  final startAddressController = TextEditingController();
+  final destinationAddressController = TextEditingController();
+
+  Widget _textField({
+    TextEditingController controller,
+    String label,
+    String hint,
+    String initialValue,
+    double width,
+    Icon icon,
+  }) {
     return Container(
       width: width * 0.8,
       child: TextFormField(
         onChanged: (value) {},
+        controller: controller,
+        // initialValue: initialValue,
         decoration: new InputDecoration(
+          prefixIcon: icon,
           labelText: label,
           filled: true,
           fillColor: Colors.white,
@@ -71,7 +84,7 @@ class _HomePageState extends State<HomePage> {
   _getCurrentLocation() async {
     await _geolocator
         .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
-        .then((Position position) {
+        .then((Position position) async {
       setState(() {
         _currentPosition = position;
         mapController.animateCamera(
@@ -83,9 +96,28 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       });
+      await _getAddress();
     }).catchError((e) {
       print(e);
     });
+  }
+
+  // Method for retrieving the address
+  _getAddress() async {
+    try {
+      List<Placemark> p = await _geolocator.placemarkFromCoordinates(
+          _currentPosition.latitude, _currentPosition.longitude);
+
+      Placemark place = p[0];
+
+      setState(() {
+        _currentAddress =
+            "${place.name}, ${place.locality}, ${place.postalCode}, ${place.country}";
+        startAddressController.text = _currentAddress;
+      });
+    } catch (e) {
+      print(e);
+    }
   }
 
   @override
@@ -115,14 +147,14 @@ class _HomePageState extends State<HomePage> {
                         ),
                         infoWindow: InfoWindow(
                           title: 'Current Location',
-                          snippet: 'Home',
+                          snippet: _currentAddress,
                         ),
                         icon: BitmapDescriptor.defaultMarker,
                       ),
                     ])
                   : null,
               initialCameraPosition: _initialLocation,
-              myLocationEnabled: false,
+              myLocationEnabled: true,
               myLocationButtonEnabled: false,
               mapType: MapType.normal,
               zoomGesturesEnabled: true,
@@ -200,10 +232,22 @@ class _HomePageState extends State<HomePage> {
                         ),
                         SizedBox(height: 10),
                         _textField(
-                            'Latitude', 'Enter the place latitude', width),
+                          label: 'Start',
+                          hint: 'Choose starting point',
+                          initialValue: _currentAddress,
+                          icon: Icon(Icons.looks_one),
+                          controller: startAddressController,
+                          width: width,
+                        ),
                         SizedBox(height: 10),
                         _textField(
-                            'Longitude', 'Enter the place longitude', width),
+                          label: 'Destination',
+                          hint: 'Choose destination',
+                          initialValue: '',
+                          icon: Icon(Icons.looks_two),
+                          controller: destinationAddressController,
+                          width: width,
+                        ),
                         SizedBox(height: 10),
                         RaisedButton(
                           onPressed: () {},
@@ -245,15 +289,17 @@ class _HomePageState extends State<HomePage> {
                             child: SizedBox(
                               width: 56,
                               height: 56,
-                              child: Icon(Icons.home),
+                              child: Icon(Icons.my_location),
                             ),
                             onTap: () {
                               mapController.animateCamera(
                                 CameraUpdate.newCameraPosition(
                                   CameraPosition(
-                                    target: LatLng(37.3230, -122.0322),
+                                    target: LatLng(
+                                      _currentPosition.latitude,
+                                      _currentPosition.longitude,
+                                    ),
                                     zoom: 18.0,
-                                    tilt: 30.0,
                                   ),
                                 ),
                               );
