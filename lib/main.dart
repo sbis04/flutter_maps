@@ -30,6 +30,40 @@ class _HomePageState extends State<HomePage> {
   );
   GoogleMapController mapController;
 
+  Widget _textField(String label, String hint, double width) {
+    return Container(
+      width: width * 0.8,
+      child: TextFormField(
+        onChanged: (value) {},
+        decoration: new InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(10.0),
+            ),
+            borderSide: BorderSide(
+              color: Colors.grey[400],
+              width: 2,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(10.0),
+            ),
+            borderSide: BorderSide(
+              color: Colors.blue[300],
+              width: 2,
+            ),
+          ),
+          contentPadding: EdgeInsets.all(15),
+          hintText: hint,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
@@ -95,6 +129,56 @@ class _HomePageState extends State<HomePage> {
                       ),
                     )
                   ],
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white70,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(20.0),
+                    ),
+                  ),
+                  width: width * 0.9,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          'Coordinates',
+                          style: TextStyle(fontSize: 20.0),
+                        ),
+                        SizedBox(height: 10),
+                        _textField(
+                            'Latitude', 'Enter the place latitude', width),
+                        SizedBox(height: 10),
+                        _textField(
+                            'Longitude', 'Enter the place longitude', width),
+                        SizedBox(height: 10),
+                        RaisedButton(
+                          onPressed: () {},
+                          color: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              'SET MARKER',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
