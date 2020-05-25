@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_maps/secrets.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -30,6 +32,10 @@ class _HomePageState extends State<HomePage> {
   GoogleMapController mapController;
 
   final Geolocator _geolocator = Geolocator();
+
+  PolylinePoints polylinePoints;
+  // List<LatLng> polylineCoordinates = [];
+
   Position _currentPosition;
   String _currentAddress;
 
@@ -40,13 +46,19 @@ class _HomePageState extends State<HomePage> {
   String _destinationAddress;
   double _placeDistance;
 
+  Set<Marker> markers = {};
+  // Set<Polyline> _polylines = {};
+  Map<PolylineId, Polyline> polylines = {};
+  List<LatLng> polylineCoordinates = [];
+
   Widget _textField({
     TextEditingController controller,
     String label,
     String hint,
     String initialValue,
     double width,
-    Icon icon,
+    Icon prefixIcon,
+    Widget suffixIcon,
     Function(String) locationCallback,
   }) {
     return Container(
@@ -58,7 +70,8 @@ class _HomePageState extends State<HomePage> {
         controller: controller,
         // initialValue: initialValue,
         decoration: new InputDecoration(
-          prefixIcon: icon,
+          prefixIcon: prefixIcon,
+          suffixIcon: suffixIcon,
           labelText: label,
           filled: true,
           fillColor: Colors.white,
@@ -139,12 +152,43 @@ class _HomePageState extends State<HomePage> {
       Position startCoordinates = startPlacemark[0].position;
       Position destinationCoordinates = destinationPlacemark[0].position;
 
+      Marker startMarker = Marker(
+        markerId: MarkerId('$startCoordinates'),
+        position: LatLng(
+          startCoordinates.latitude,
+          startCoordinates.longitude,
+        ),
+        infoWindow: InfoWindow(
+          title: 'Start',
+          snippet: _startAddress,
+        ),
+        icon: BitmapDescriptor.defaultMarker,
+      );
+
+      Marker destinationMarker = Marker(
+        markerId: MarkerId('$destinationCoordinates'),
+        position: LatLng(
+          destinationCoordinates.latitude,
+          destinationCoordinates.longitude,
+        ),
+        infoWindow: InfoWindow(
+          title: 'Destination',
+          snippet: _destinationAddress,
+        ),
+        icon: BitmapDescriptor.defaultMarker,
+      );
+
+      markers.add(startMarker);
+      markers.add(destinationMarker);
+
       double distanceInMeters = await Geolocator().distanceBetween(
         startCoordinates.latitude,
         startCoordinates.longitude,
         destinationCoordinates.latitude,
         destinationCoordinates.longitude,
       );
+
+      await _createPolylines(startCoordinates, destinationCoordinates);
 
       setState(() {
         _placeDistance = distanceInMeters;
@@ -153,6 +197,32 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       print(e);
     }
+  }
+
+  _createPolylines(Position start, Position destination) async {
+    polylinePoints = PolylinePoints();
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      Secrets.API_KEY,
+      PointLatLng(start.latitude, start.longitude),
+      PointLatLng(destination.latitude, destination.longitude),
+      travelMode: TravelMode.walking,
+    );
+
+    if (result.points.isNotEmpty) {
+      result.points.forEach((PointLatLng point) {
+        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+      });
+    }
+
+    PolylineId id = PolylineId('poly');
+    Polyline polyline = Polyline(
+      polylineId: id,
+      color: Colors.red,
+      points: polylineCoordinates,
+      width: 3,
+    );
+    polylines[id] = polyline;
+    setState(() {});
   }
 
   @override
@@ -172,28 +242,14 @@ class _HomePageState extends State<HomePage> {
         body: Stack(
           children: <Widget>[
             GoogleMap(
-              markers: _currentPosition != null
-                  ? Set<Marker>.from([
-                      Marker(
-                        markerId: MarkerId('$_currentPosition'),
-                        position: LatLng(
-                          _currentPosition.latitude,
-                          _currentPosition.longitude,
-                        ),
-                        infoWindow: InfoWindow(
-                          title: 'Current Location',
-                          snippet: _currentAddress,
-                        ),
-                        icon: BitmapDescriptor.defaultMarker,
-                      ),
-                    ])
-                  : null,
+              markers: markers != null ? Set<Marker>.from(markers) : null,
               initialCameraPosition: _initialLocation,
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
               mapType: MapType.normal,
               zoomGesturesEnabled: true,
               zoomControlsEnabled: true,
+              polylines: Set<Polyline>.of(polylines.values),
               onMapCreated: (GoogleMapController controller) {
                 mapController = controller;
               },
@@ -270,7 +326,14 @@ class _HomePageState extends State<HomePage> {
                             label: 'Start',
                             hint: 'Choose starting point',
                             initialValue: _currentAddress,
-                            icon: Icon(Icons.looks_one),
+                            prefixIcon: Icon(Icons.looks_one),
+                            suffixIcon: IconButton(
+                              icon: Icon(Icons.my_location),
+                              onPressed: () {
+                                startAddressController.text = _currentAddress;
+                                _startAddress = _currentAddress;
+                              },
+                            ),
                             controller: startAddressController,
                             width: width,
                             locationCallback: (String value) {
@@ -283,7 +346,7 @@ class _HomePageState extends State<HomePage> {
                             label: 'Destination',
                             hint: 'Choose destination',
                             initialValue: '',
-                            icon: Icon(Icons.looks_two),
+                            prefixIcon: Icon(Icons.looks_two),
                             controller: destinationAddressController,
                             width: width,
                             locationCallback: (String value) {
@@ -294,6 +357,11 @@ class _HomePageState extends State<HomePage> {
                         SizedBox(height: 10),
                         RaisedButton(
                           onPressed: () async {
+                            if (markers.isNotEmpty) markers.clear();
+                            if (polylines.isNotEmpty) polylines.clear();
+                            if (polylineCoordinates.isNotEmpty)
+                              polylineCoordinates.clear();
+
                             _calculateDistance();
                           },
                           color: Colors.red,
