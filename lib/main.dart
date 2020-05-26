@@ -4,6 +4,8 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'dart:math' show cos, sqrt, asin;
+
 void main() {
   runApp(MyApp());
 }
@@ -33,9 +35,6 @@ class _HomePageState extends State<HomePage> {
 
   final Geolocator _geolocator = Geolocator();
 
-  PolylinePoints polylinePoints;
-  // List<LatLng> polylineCoordinates = [];
-
   Position _currentPosition;
   String _currentAddress;
 
@@ -47,7 +46,8 @@ class _HomePageState extends State<HomePage> {
   double _placeDistance;
 
   Set<Marker> markers = {};
-  // Set<Polyline> _polylines = {};
+
+  PolylinePoints polylinePoints;
   Map<PolylineId, Polyline> polylines = {};
   List<LatLng> polylineCoordinates = [];
 
@@ -200,17 +200,30 @@ class _HomePageState extends State<HomePage> {
           ),
         );
 
-        double distanceInMeters = await Geolocator().distanceBetween(
-          startCoordinates.latitude,
-          startCoordinates.longitude,
-          destinationCoordinates.latitude,
-          destinationCoordinates.longitude,
-        );
+        // Calculating the distance between the start and the end positions
+        // with a straight path, without considering any route
+        // double distanceInMeters = await Geolocator().bearingBetween(
+        //   startCoordinates.latitude,
+        //   startCoordinates.longitude,
+        //   destinationCoordinates.latitude,
+        //   destinationCoordinates.longitude,
+        // );
 
         await _createPolylines(startCoordinates, destinationCoordinates);
 
+        double totalDistance = 0.0;
+
+        for (int i = 0; i < polylineCoordinates.length - 1; i++) {
+          totalDistance += _coordinateDistance(
+            polylineCoordinates[i].latitude,
+            polylineCoordinates[i].longitude,
+            polylineCoordinates[i + 1].latitude,
+            polylineCoordinates[i + 1].longitude,
+          );
+        }
+
         setState(() {
-          _placeDistance = distanceInMeters;
+          _placeDistance = totalDistance;
           print('DISTANCE: $_placeDistance');
         });
 
@@ -220,6 +233,15 @@ class _HomePageState extends State<HomePage> {
       print(e);
     }
     return false;
+  }
+
+  double _coordinateDistance(lat1, lon1, lat2, lon2) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((lat2 - lat1) * p) / 2 +
+        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
   }
 
   _createPolylines(Position start, Position destination) async {
@@ -380,31 +402,35 @@ class _HomePageState extends State<HomePage> {
                             }),
                         SizedBox(height: 10),
                         RaisedButton(
-                          onPressed: () async {
-                            setState(() {
-                              if (markers.isNotEmpty) markers.clear();
-                              if (polylines.isNotEmpty) polylines.clear();
-                              if (polylineCoordinates.isNotEmpty)
-                                polylineCoordinates.clear();
-                            });
+                          onPressed: (_startAddress != '' &&
+                                  _destinationAddress != '')
+                              ? () async {
+                                  setState(() {
+                                    if (markers.isNotEmpty) markers.clear();
+                                    if (polylines.isNotEmpty) polylines.clear();
+                                    if (polylineCoordinates.isNotEmpty)
+                                      polylineCoordinates.clear();
+                                  });
 
-                            _calculateDistance().then((isCalculated) {
-                              if (isCalculated) {
-                                _scaffoldKey.currentState.showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text('Distance Calculated Sucessfully'),
-                                  ),
-                                );
-                              } else {
-                                _scaffoldKey.currentState.showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error Calculating Distance'),
-                                  ),
-                                );
-                              }
-                            });
-                          },
+                                  _calculateDistance().then((isCalculated) {
+                                    if (isCalculated) {
+                                      _scaffoldKey.currentState.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              'Distance Calculated Sucessfully'),
+                                        ),
+                                      );
+                                    } else {
+                                      _scaffoldKey.currentState.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              'Error Calculating Distance'),
+                                        ),
+                                      );
+                                    }
+                                  });
+                                }
+                              : null,
                           color: Colors.red,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20.0),
