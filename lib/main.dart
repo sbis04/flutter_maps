@@ -41,9 +41,9 @@ class _HomePageState extends State<HomePage> {
   final startAddressController = TextEditingController();
   final destinationAddressController = TextEditingController();
 
-  String _startAddress;
-  String _destinationAddress;
-  double _placeDistance;
+  String _startAddress = '';
+  String _destinationAddress = '';
+  String _placeDistance;
 
   Set<Marker> markers = {};
 
@@ -105,7 +105,7 @@ class _HomePageState extends State<HomePage> {
   // Method for retrieving the current location
   _getCurrentLocation() async {
     await _geolocator
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
         .then((Position position) async {
       setState(() {
         _currentPosition = position;
@@ -152,7 +152,14 @@ class _HomePageState extends State<HomePage> {
           await _geolocator.placemarkFromAddress(_destinationAddress);
 
       if (startPlacemark != null && destinationPlacemark != null) {
-        Position startCoordinates = startPlacemark[0].position;
+        // Use the retrieved coordinates of the current position,
+        // instead of the address if the start position is user's
+        // current position, as it results in better accuracy.
+        Position startCoordinates = _startAddress == _currentAddress
+            ? Position(
+                latitude: _currentPosition.latitude,
+                longitude: _currentPosition.longitude)
+            : startPlacemark[0].position;
         Position destinationCoordinates = destinationPlacemark[0].position;
 
         Marker startMarker = Marker(
@@ -187,11 +194,11 @@ class _HomePageState extends State<HomePage> {
         mapController.animateCamera(
           CameraUpdate.newLatLngBounds(
             LatLngBounds(
-              southwest: LatLng(
+              northeast: LatLng(
                 startCoordinates.latitude,
                 startCoordinates.longitude,
               ),
-              northeast: LatLng(
+              southwest: LatLng(
                 destinationCoordinates.latitude,
                 destinationCoordinates.longitude,
               ),
@@ -223,8 +230,8 @@ class _HomePageState extends State<HomePage> {
         }
 
         setState(() {
-          _placeDistance = totalDistance;
-          print('DISTANCE: $_placeDistance');
+          _placeDistance = totalDistance.toStringAsFixed(2);
+          print('DISTANCE: $_placeDistance km');
         });
 
         return true;
@@ -350,103 +357,119 @@ class _HomePageState extends State<HomePage> {
             SafeArea(
               child: Align(
                 alignment: Alignment.topCenter,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white70,
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(20.0),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white70,
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(20.0),
+                      ),
                     ),
-                  ),
-                  width: width * 0.9,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(
-                          'Coordinates',
-                          style: TextStyle(fontSize: 20.0),
-                        ),
-                        SizedBox(height: 10),
-                        _textField(
-                            label: 'Start',
-                            hint: 'Choose starting point',
-                            initialValue: _currentAddress,
-                            prefixIcon: Icon(Icons.looks_one),
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.my_location),
-                              onPressed: () {
-                                startAddressController.text = _currentAddress;
-                                _startAddress = _currentAddress;
-                              },
-                            ),
-                            controller: startAddressController,
-                            width: width,
-                            locationCallback: (String value) {
-                              setState(() {
-                                _startAddress = value;
-                              });
-                            }),
-                        SizedBox(height: 10),
-                        _textField(
-                            label: 'Destination',
-                            hint: 'Choose destination',
-                            initialValue: '',
-                            prefixIcon: Icon(Icons.looks_two),
-                            controller: destinationAddressController,
-                            width: width,
-                            locationCallback: (String value) {
-                              setState(() {
-                                _destinationAddress = value;
-                              });
-                            }),
-                        SizedBox(height: 10),
-                        RaisedButton(
-                          onPressed: (_startAddress != '' &&
-                                  _destinationAddress != '')
-                              ? () async {
-                                  setState(() {
-                                    if (markers.isNotEmpty) markers.clear();
-                                    if (polylines.isNotEmpty) polylines.clear();
-                                    if (polylineCoordinates.isNotEmpty)
-                                      polylineCoordinates.clear();
-                                  });
-
-                                  _calculateDistance().then((isCalculated) {
-                                    if (isCalculated) {
-                                      _scaffoldKey.currentState.showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              'Distance Calculated Sucessfully'),
-                                        ),
-                                      );
-                                    } else {
-                                      _scaffoldKey.currentState.showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              'Error Calculating Distance'),
-                                        ),
-                                      );
-                                    }
-                                  });
-                                }
-                              : null,
-                          color: Colors.red,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20.0),
+                    width: width * 0.9,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            'Places',
+                            style: TextStyle(fontSize: 20.0),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
+                          SizedBox(height: 10),
+                          _textField(
+                              label: 'Start',
+                              hint: 'Choose starting point',
+                              initialValue: _currentAddress,
+                              prefixIcon: Icon(Icons.looks_one),
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.my_location),
+                                onPressed: () {
+                                  startAddressController.text = _currentAddress;
+                                  _startAddress = _currentAddress;
+                                },
+                              ),
+                              controller: startAddressController,
+                              width: width,
+                              locationCallback: (String value) {
+                                setState(() {
+                                  _startAddress = value;
+                                });
+                              }),
+                          SizedBox(height: 10),
+                          _textField(
+                              label: 'Destination',
+                              hint: 'Choose destination',
+                              initialValue: '',
+                              prefixIcon: Icon(Icons.looks_two),
+                              controller: destinationAddressController,
+                              width: width,
+                              locationCallback: (String value) {
+                                setState(() {
+                                  _destinationAddress = value;
+                                });
+                              }),
+                          SizedBox(height: 10),
+                          Visibility(
+                            visible: _placeDistance == null ? false : true,
                             child: Text(
-                              'Calculate Distance'.toUpperCase(),
+                              'DISTANCE: $_placeDistance km',
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20.0,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 5),
+                          RaisedButton(
+                            onPressed: (_startAddress != '' &&
+                                    _destinationAddress != '')
+                                ? () async {
+                                    setState(() {
+                                      if (markers.isNotEmpty) markers.clear();
+                                      if (polylines.isNotEmpty)
+                                        polylines.clear();
+                                      if (polylineCoordinates.isNotEmpty)
+                                        polylineCoordinates.clear();
+                                      _placeDistance = null;
+                                    });
+
+                                    _calculateDistance().then((isCalculated) {
+                                      if (isCalculated) {
+                                        _scaffoldKey.currentState.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Distance Calculated Sucessfully'),
+                                          ),
+                                        );
+                                      } else {
+                                        _scaffoldKey.currentState.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Error Calculating Distance'),
+                                          ),
+                                        );
+                                      }
+                                    });
+                                  }
+                                : null,
+                            color: Colors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20.0),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                'Show Route'.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -456,7 +479,7 @@ class _HomePageState extends State<HomePage> {
               child: Align(
                 alignment: Alignment.bottomRight,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 10.0),
+                  padding: const EdgeInsets.only(right: 10.0, bottom: 10.0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     mainAxisSize: MainAxisSize.max,
