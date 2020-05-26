@@ -191,16 +191,33 @@ class _HomePageState extends State<HomePage> {
         markers.add(startMarker);
         markers.add(destinationMarker);
 
+        print('START COORDINATES: $startCoordinates');
+        print('DESTINATION COORDINATES: $destinationCoordinates');
+
+        Position _northeastCoordinates;
+        Position _southwestCoordinates;
+
+        // Calculating to check that
+        // southwest coordinate <= northeast coordinate
+        if(startCoordinates.latitude <= destinationCoordinates.latitude) {
+          _southwestCoordinates = startCoordinates;
+          _northeastCoordinates = destinationCoordinates;
+        }
+        else {
+          _southwestCoordinates = destinationCoordinates;
+          _northeastCoordinates = startCoordinates;
+        }
+
         mapController.animateCamera(
           CameraUpdate.newLatLngBounds(
             LatLngBounds(
               northeast: LatLng(
-                startCoordinates.latitude,
-                startCoordinates.longitude,
+                _northeastCoordinates.latitude,
+                _northeastCoordinates.longitude,
               ),
               southwest: LatLng(
-                destinationCoordinates.latitude,
-                destinationCoordinates.longitude,
+                _southwestCoordinates.latitude,
+                _southwestCoordinates.longitude,
               ),
             ),
             100.0,
