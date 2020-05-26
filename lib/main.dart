@@ -51,6 +51,8 @@ class _HomePageState extends State<HomePage> {
   Map<PolylineId, Polyline> polylines = {};
   List<LatLng> polylineCoordinates = [];
 
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
   Widget _textField({
     TextEditingController controller,
     String label,
@@ -107,7 +109,7 @@ class _HomePageState extends State<HomePage> {
         .then((Position position) async {
       setState(() {
         _currentPosition = position;
-        print('CURRENT POS: $_currentAddress');
+        print('CURRENT POS: $_currentPosition');
         mapController.animateCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(
@@ -142,77 +144,82 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  _calculateDistance() async {
+  Future<bool> _calculateDistance() async {
     try {
       List<Placemark> startPlacemark =
           await _geolocator.placemarkFromAddress(_startAddress);
       List<Placemark> destinationPlacemark =
           await _geolocator.placemarkFromAddress(_destinationAddress);
 
-      Position startCoordinates = startPlacemark[0].position;
-      Position destinationCoordinates = destinationPlacemark[0].position;
+      if (startPlacemark != null && destinationPlacemark != null) {
+        Position startCoordinates = startPlacemark[0].position;
+        Position destinationCoordinates = destinationPlacemark[0].position;
 
-      Marker startMarker = Marker(
-        markerId: MarkerId('$startCoordinates'),
-        position: LatLng(
+        Marker startMarker = Marker(
+          markerId: MarkerId('$startCoordinates'),
+          position: LatLng(
+            startCoordinates.latitude,
+            startCoordinates.longitude,
+          ),
+          infoWindow: InfoWindow(
+            title: 'Start',
+            snippet: _startAddress,
+          ),
+          icon: BitmapDescriptor.defaultMarker,
+        );
+
+        Marker destinationMarker = Marker(
+          markerId: MarkerId('$destinationCoordinates'),
+          position: LatLng(
+            destinationCoordinates.latitude,
+            destinationCoordinates.longitude,
+          ),
+          infoWindow: InfoWindow(
+            title: 'Destination',
+            snippet: _destinationAddress,
+          ),
+          icon: BitmapDescriptor.defaultMarker,
+        );
+
+        markers.add(startMarker);
+        markers.add(destinationMarker);
+
+        mapController.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(
+                startCoordinates.latitude,
+                startCoordinates.longitude,
+              ),
+              northeast: LatLng(
+                destinationCoordinates.latitude,
+                destinationCoordinates.longitude,
+              ),
+            ),
+            100.0,
+          ),
+        );
+
+        double distanceInMeters = await Geolocator().distanceBetween(
           startCoordinates.latitude,
           startCoordinates.longitude,
-        ),
-        infoWindow: InfoWindow(
-          title: 'Start',
-          snippet: _startAddress,
-        ),
-        icon: BitmapDescriptor.defaultMarker,
-      );
-
-      Marker destinationMarker = Marker(
-        markerId: MarkerId('$destinationCoordinates'),
-        position: LatLng(
           destinationCoordinates.latitude,
           destinationCoordinates.longitude,
-        ),
-        infoWindow: InfoWindow(
-          title: 'Destination',
-          snippet: _destinationAddress,
-        ),
-        icon: BitmapDescriptor.defaultMarker,
-      );
+        );
 
-      markers.add(startMarker);
-      markers.add(destinationMarker);
+        await _createPolylines(startCoordinates, destinationCoordinates);
 
-      mapController.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(
-              startCoordinates.latitude,
-              startCoordinates.longitude,
-            ),
-            northeast: LatLng(
-              destinationCoordinates.latitude,
-              destinationCoordinates.longitude,
-            ),
-          ),
-          100.0,
-        ),
-      );
+        setState(() {
+          _placeDistance = distanceInMeters;
+          print('DISTANCE: $_placeDistance');
+        });
 
-      double distanceInMeters = await Geolocator().distanceBetween(
-        startCoordinates.latitude,
-        startCoordinates.longitude,
-        destinationCoordinates.latitude,
-        destinationCoordinates.longitude,
-      );
-
-      await _createPolylines(startCoordinates, destinationCoordinates);
-
-      setState(() {
-        _placeDistance = distanceInMeters;
-        print('DISTANCE: $_placeDistance');
-      });
+        return true;
+      }
     } catch (e) {
       print(e);
     }
+    return false;
   }
 
   _createPolylines(Position start, Position destination) async {
@@ -221,7 +228,7 @@ class _HomePageState extends State<HomePage> {
       Secrets.API_KEY,
       PointLatLng(start.latitude, start.longitude),
       PointLatLng(destination.latitude, destination.longitude),
-      travelMode: TravelMode.walking,
+      travelMode: TravelMode.transit,
     );
 
     if (result.points.isNotEmpty) {
@@ -255,6 +262,7 @@ class _HomePageState extends State<HomePage> {
       height: height,
       width: width,
       child: Scaffold(
+        key: _scaffoldKey,
         body: Stack(
           children: <Widget>[
             GoogleMap(
@@ -373,12 +381,29 @@ class _HomePageState extends State<HomePage> {
                         SizedBox(height: 10),
                         RaisedButton(
                           onPressed: () async {
-                            if (markers.isNotEmpty) markers.clear();
-                            if (polylines.isNotEmpty) polylines.clear();
-                            if (polylineCoordinates.isNotEmpty)
-                              polylineCoordinates.clear();
+                            setState(() {
+                              if (markers.isNotEmpty) markers.clear();
+                              if (polylines.isNotEmpty) polylines.clear();
+                              if (polylineCoordinates.isNotEmpty)
+                                polylineCoordinates.clear();
+                            });
 
-                            _calculateDistance();
+                            _calculateDistance().then((isCalculated) {
+                              if (isCalculated) {
+                                _scaffoldKey.currentState.showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Distance Calculated Sucessfully'),
+                                  ),
+                                );
+                              } else {
+                                _scaffoldKey.currentState.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error Calculating Distance'),
+                                  ),
+                                );
+                              }
+                            });
                           },
                           color: Colors.red,
                           shape: RoundedRectangleBorder(
