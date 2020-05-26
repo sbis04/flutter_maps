@@ -259,6 +259,8 @@ class _HomePageState extends State<HomePage> {
     return false;
   }
 
+  // Formula for calculating distance between two coordinates
+  // https://stackoverflow.com/a/54138876/11910277
   double _coordinateDistance(lat1, lon1, lat2, lon2) {
     var p = 0.017453292519943295;
     var c = cos;
