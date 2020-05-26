@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_maps/secrets.dart';
+import 'package:flutter_maps/secrets.dart'; // Stores the Google Maps API Key 
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -11,7 +11,6 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -144,8 +143,10 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Method for calculating the distance between two places
   Future<bool> _calculateDistance() async {
     try {
+      // Retrieving placemarks from addresses
       List<Placemark> startPlacemark =
           await _geolocator.placemarkFromAddress(_startAddress);
       List<Placemark> destinationPlacemark =
@@ -162,6 +163,7 @@ class _HomePageState extends State<HomePage> {
             : startPlacemark[0].position;
         Position destinationCoordinates = destinationPlacemark[0].position;
 
+        // Start Location Marker
         Marker startMarker = Marker(
           markerId: MarkerId('$startCoordinates'),
           position: LatLng(
@@ -175,6 +177,7 @@ class _HomePageState extends State<HomePage> {
           icon: BitmapDescriptor.defaultMarker,
         );
 
+        // Destination Location Marker
         Marker destinationMarker = Marker(
           markerId: MarkerId('$destinationCoordinates'),
           position: LatLng(
@@ -188,6 +191,7 @@ class _HomePageState extends State<HomePage> {
           icon: BitmapDescriptor.defaultMarker,
         );
 
+        // Adding the markers to the list
         markers.add(startMarker);
         markers.add(destinationMarker);
 
@@ -199,15 +203,16 @@ class _HomePageState extends State<HomePage> {
 
         // Calculating to check that
         // southwest coordinate <= northeast coordinate
-        if(startCoordinates.latitude <= destinationCoordinates.latitude) {
+        if (startCoordinates.latitude <= destinationCoordinates.latitude) {
           _southwestCoordinates = startCoordinates;
           _northeastCoordinates = destinationCoordinates;
-        }
-        else {
+        } else {
           _southwestCoordinates = destinationCoordinates;
           _northeastCoordinates = startCoordinates;
         }
 
+        // Accomodate the two locations within the
+        // camera view of the map
         mapController.animateCamera(
           CameraUpdate.newLatLngBounds(
             LatLngBounds(
@@ -237,6 +242,8 @@ class _HomePageState extends State<HomePage> {
 
         double totalDistance = 0.0;
 
+        // Calculating the total distance by adding the distance
+        // between small segments
         for (int i = 0; i < polylineCoordinates.length - 1; i++) {
           totalDistance += _coordinateDistance(
             polylineCoordinates[i].latitude,
@@ -270,10 +277,11 @@ class _HomePageState extends State<HomePage> {
     return 12742 * asin(sqrt(a));
   }
 
+  // Create the polylines for showing the route between two places
   _createPolylines(Position start, Position destination) async {
     polylinePoints = PolylinePoints();
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      Secrets.API_KEY,
+      Secrets.API_KEY, // Google Maps API Key 
       PointLatLng(start.latitude, start.longitude),
       PointLatLng(destination.latitude, destination.longitude),
       travelMode: TravelMode.transit,
@@ -293,7 +301,6 @@ class _HomePageState extends State<HomePage> {
       width: 3,
     );
     polylines[id] = polyline;
-    setState(() {});
   }
 
   @override
@@ -313,6 +320,7 @@ class _HomePageState extends State<HomePage> {
         key: _scaffoldKey,
         body: Stack(
           children: <Widget>[
+            // Map View
             GoogleMap(
               markers: markers != null ? Set<Marker>.from(markers) : null,
               initialCameraPosition: _initialLocation,
@@ -326,6 +334,7 @@ class _HomePageState extends State<HomePage> {
                 mapController = controller;
               },
             ),
+            // Show zoom buttons
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.only(left: 10.0),
@@ -373,6 +382,8 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            // Show the place input fields & button for
+            // showing the route
             SafeArea(
               child: Align(
                 alignment: Alignment.topCenter,
@@ -494,6 +505,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            // Show current location button
             SafeArea(
               child: Align(
                 alignment: Alignment.bottomRight,
