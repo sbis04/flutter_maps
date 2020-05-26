@@ -181,6 +181,21 @@ class _HomePageState extends State<HomePage> {
       markers.add(startMarker);
       markers.add(destinationMarker);
 
+      mapController.animateCamera(
+        CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(
+                startCoordinates.latitude,
+                startCoordinates.longitude,
+              ),
+              northeast: LatLng(
+                destinationCoordinates.latitude,
+                destinationCoordinates.longitude,
+              ),
+            ),
+            100.0),
+      );
+
       double distanceInMeters = await Geolocator().distanceBetween(
         startCoordinates.latitude,
         startCoordinates.longitude,
