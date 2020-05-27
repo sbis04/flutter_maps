@@ -56,7 +56,6 @@ class _MapViewState extends State<MapView> {
     TextEditingController controller,
     String label,
     String hint,
-    String initialValue,
     double width,
     Icon prefixIcon,
     Widget suffixIcon,
@@ -69,7 +68,6 @@ class _MapViewState extends State<MapView> {
           locationCallback(value);
         },
         controller: controller,
-        // initialValue: initialValue,
         decoration: new InputDecoration(
           prefixIcon: prefixIcon,
           suffixIcon: suffixIcon,
@@ -410,7 +408,6 @@ class _MapViewState extends State<MapView> {
                           _textField(
                               label: 'Start',
                               hint: 'Choose starting point',
-                              initialValue: _currentAddress,
                               prefixIcon: Icon(Icons.looks_one),
                               suffixIcon: IconButton(
                                 icon: Icon(Icons.my_location),
@@ -430,7 +427,6 @@ class _MapViewState extends State<MapView> {
                           _textField(
                               label: 'Destination',
                               hint: 'Choose destination',
-                              initialValue: '',
                               prefixIcon: Icon(Icons.looks_two),
                               controller: destinationAddressController,
                               width: width,
