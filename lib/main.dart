@@ -18,17 +18,17 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: HomePage(),
+      home: MapView(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
+class MapView extends StatefulWidget {
   @override
-  _HomePageState createState() => _HomePageState();
+  _MapViewState createState() => _MapViewState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _MapViewState extends State<MapView> {
   CameraPosition _initialLocation = CameraPosition(target: LatLng(0.0, 0.0));
   GoogleMapController mapController;
 
@@ -328,7 +328,7 @@ class _HomePageState extends State<HomePage> {
               myLocationButtonEnabled: false,
               mapType: MapType.normal,
               zoomGesturesEnabled: true,
-              zoomControlsEnabled: true,
+              zoomControlsEnabled: false,
               polylines: Set<Polyline>.of(polylines.values),
               onMapCreated: (GoogleMapController controller) {
                 mapController = controller;
