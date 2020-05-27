@@ -64,7 +64,7 @@ class _MapViewState extends State<MapView> {
   }) {
     return Container(
       width: width * 0.8,
-      child: TextFormField(
+      child: TextField(
         onChanged: (value) {
           locationCallback(value);
         },
