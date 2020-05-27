@@ -209,7 +209,7 @@ class _MapViewState extends State<MapView> {
           _northeastCoordinates = startCoordinates;
         }
 
-        // Accomodate the two locations within the
+        // Accommodate the two locations within the
         // camera view of the map
         mapController.animateCamera(
           CameraUpdate.newLatLngBounds(
