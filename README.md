@@ -97,14 +97,14 @@ You do not require to complete these configurations if you are cloning this proj
 
 * Also, add the following to `ios/Runner/Info.plist` file:
   
-  ```plist
+  ```
   <key>io.flutter.embedded_views_preview</key>
   <string>YES</string>
   ```
 
 * For getting location permission, add the following to the same file:
   
-  ```plist
+  ```
   <key>NSLocationWhenInUseUsageDescription</key>
   <string>This app needs access to location when open.</string>
   ```
