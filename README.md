@@ -36,7 +36,7 @@ The plugins used in this project are:
   code flutter_maps
   ```
 
-* For the **Android** part, go to `android/app/src/main/AndroidManifest.xml` file and add your **API key** there.
+* For the **Android** part, go to `android/app/src/main/AndroidManifest.xml` file and add your **API key** here.
   
   ```xml
   <!-- Add your Google Maps API Key here -->
@@ -44,11 +44,12 @@ The plugins used in this project are:
                  android:value="YOUR KEY HERE"/>
   ```
 
-* For the **iOS** part, go to `ios/Runner/AppDelegate.swift` file and add your **API key** there.
+* For the **iOS** part, go to `ios/Runner/AppDelegate.swift` file and add your **API key** here.
   
   ```swift
   GMSServices.provideAPIKey("YOUR KEY HERE")
   ```
+* Go to the `lib/secrets.dart` file and add your **API key** here.
 
 <!-- > For more info regarding generating the **API key**, you can check out my article here. -->
 
