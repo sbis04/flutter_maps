@@ -55,7 +55,7 @@ The plugins used in this project are:
 
 ## Full configuration (already done in this project)
 
-You do not require to complete these configurations if you are cloning this project, as they are already done in it. But these many may helpful if you are setting up a new Flutter project for using Google Maps and location services.
+You do not require to complete these configurations if you are cloning this project, as they are already done in it. But these may be helpful if you are setting up a new Flutter project for using Google Maps and location services.
 
 ### Android setup
 
