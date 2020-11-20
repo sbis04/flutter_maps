@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_maps/secrets.dart'; // Stores the Google Maps API Key 
+import 'package:flutter_maps/secrets.dart'; // Stores the Google Maps API Key
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -40,6 +41,9 @@ class _MapViewState extends State<MapView> {
   final startAddressController = TextEditingController();
   final destinationAddressController = TextEditingController();
 
+  final startAddressFocusNode = FocusNode();
+  final desrinationAddressFocusNode = FocusNode();
+
   String _startAddress = '';
   String _destinationAddress = '';
   String _placeDistance;
@@ -54,6 +58,7 @@ class _MapViewState extends State<MapView> {
 
   Widget _textField({
     TextEditingController controller,
+    FocusNode focusNode,
     String label,
     String hint,
     double width,
@@ -68,6 +73,7 @@ class _MapViewState extends State<MapView> {
           locationCallback(value);
         },
         controller: controller,
+        focusNode: focusNode,
         decoration: new InputDecoration(
           prefixIcon: prefixIcon,
           suffixIcon: suffixIcon,
@@ -101,8 +107,7 @@ class _MapViewState extends State<MapView> {
 
   // Method for retrieving the current location
   _getCurrentLocation() async {
-    await _geolocator
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+    await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
         .then((Position position) async {
       setState(() {
         _currentPosition = position;
@@ -125,8 +130,8 @@ class _MapViewState extends State<MapView> {
   // Method for retrieving the address
   _getAddress() async {
     try {
-      List<Placemark> p = await _geolocator.placemarkFromCoordinates(
-          _currentPosition.latitude, _currentPosition.longitude);
+      List<Placemark> p =
+          await placemarkFromCoordinates(_currentPosition.latitude, _currentPosition.longitude);
 
       Placemark place = p[0];
 
@@ -145,21 +150,20 @@ class _MapViewState extends State<MapView> {
   Future<bool> _calculateDistance() async {
     try {
       // Retrieving placemarks from addresses
-      List<Placemark> startPlacemark =
-          await _geolocator.placemarkFromAddress(_startAddress);
-      List<Placemark> destinationPlacemark =
-          await _geolocator.placemarkFromAddress(_destinationAddress);
+      List<Location> startPlacemark = await locationFromAddress(_startAddress);
+      List<Location> destinationPlacemark = await locationFromAddress(_destinationAddress);
 
       if (startPlacemark != null && destinationPlacemark != null) {
         // Use the retrieved coordinates of the current position,
         // instead of the address if the start position is user's
         // current position, as it results in better accuracy.
         Position startCoordinates = _startAddress == _currentAddress
-            ? Position(
-                latitude: _currentPosition.latitude,
-                longitude: _currentPosition.longitude)
-            : startPlacemark[0].position;
-        Position destinationCoordinates = destinationPlacemark[0].position;
+            ? Position(latitude: _currentPosition.latitude, longitude: _currentPosition.longitude)
+            : Position(
+                latitude: startPlacemark[0].latitude, longitude: startPlacemark[0].longitude);
+        Position destinationCoordinates = Position(
+            latitude: destinationPlacemark[0].latitude,
+            longitude: destinationPlacemark[0].longitude);
 
         // Start Location Marker
         Marker startMarker = Marker(
@@ -199,15 +203,23 @@ class _MapViewState extends State<MapView> {
         Position _northeastCoordinates;
         Position _southwestCoordinates;
 
-        // Calculating to check that
-        // southwest coordinate <= northeast coordinate
-        if (startCoordinates.latitude <= destinationCoordinates.latitude) {
-          _southwestCoordinates = startCoordinates;
-          _northeastCoordinates = destinationCoordinates;
-        } else {
-          _southwestCoordinates = destinationCoordinates;
-          _northeastCoordinates = startCoordinates;
-        }
+        // Calculating to check that the position relative
+        // to the frame, and pan & zoom the camera accordingly.
+        double miny = (startCoordinates.latitude <= destinationCoordinates.latitude)
+            ? startCoordinates.latitude
+            : destinationCoordinates.latitude;
+        double minx = (startCoordinates.longitude <= destinationCoordinates.longitude)
+            ? startCoordinates.longitude
+            : destinationCoordinates.longitude;
+        double maxy = (startCoordinates.latitude <= destinationCoordinates.latitude)
+            ? destinationCoordinates.latitude
+            : startCoordinates.latitude;
+        double maxx = (startCoordinates.longitude <= destinationCoordinates.longitude)
+            ? destinationCoordinates.longitude
+            : startCoordinates.longitude;
+
+        _southwestCoordinates = Position(latitude: miny, longitude: minx);
+        _northeastCoordinates = Position(latitude: maxy, longitude: maxx);
 
         // Accommodate the two locations within the
         // camera view of the map
@@ -279,7 +291,7 @@ class _MapViewState extends State<MapView> {
   _createPolylines(Position start, Position destination) async {
     polylinePoints = PolylinePoints();
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      Secrets.API_KEY, // Google Maps API Key 
+      Secrets.API_KEY, // Google Maps API Key
       PointLatLng(start.latitude, start.longitude),
       PointLatLng(destination.latitude, destination.longitude),
       travelMode: TravelMode.transit,
@@ -417,6 +429,7 @@ class _MapViewState extends State<MapView> {
                                 },
                               ),
                               controller: startAddressController,
+                              focusNode: startAddressFocusNode,
                               width: width,
                               locationCallback: (String value) {
                                 setState(() {
@@ -429,6 +442,7 @@ class _MapViewState extends State<MapView> {
                               hint: 'Choose destination',
                               prefixIcon: Icon(Icons.looks_two),
                               controller: destinationAddressController,
+                              focusNode: desrinationAddressFocusNode,
                               width: width,
                               locationCallback: (String value) {
                                 setState(() {
@@ -448,13 +462,13 @@ class _MapViewState extends State<MapView> {
                           ),
                           SizedBox(height: 5),
                           RaisedButton(
-                            onPressed: (_startAddress != '' &&
-                                    _destinationAddress != '')
+                            onPressed: (_startAddress != '' && _destinationAddress != '')
                                 ? () async {
+                                    startAddressFocusNode.unfocus();
+                                    desrinationAddressFocusNode.unfocus();
                                     setState(() {
                                       if (markers.isNotEmpty) markers.clear();
-                                      if (polylines.isNotEmpty)
-                                        polylines.clear();
+                                      if (polylines.isNotEmpty) polylines.clear();
                                       if (polylineCoordinates.isNotEmpty)
                                         polylineCoordinates.clear();
                                       _placeDistance = null;
@@ -464,15 +478,13 @@ class _MapViewState extends State<MapView> {
                                       if (isCalculated) {
                                         _scaffoldKey.currentState.showSnackBar(
                                           SnackBar(
-                                            content: Text(
-                                                'Distance Calculated Sucessfully'),
+                                            content: Text('Distance Calculated Sucessfully'),
                                           ),
                                         );
                                       } else {
                                         _scaffoldKey.currentState.showSnackBar(
                                           SnackBar(
-                                            content: Text(
-                                                'Error Calculating Distance'),
+                                            content: Text('Error Calculating Distance'),
                                           ),
                                         );
                                       }
