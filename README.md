@@ -24,6 +24,10 @@ The plugins used in this project are:
 
 ## Usage
 
+Before using it, you will need to make a new project in the **Google Cloud Platform**, and enable the Google Maps API for that project. Also, don't forget to setup the [Billing](https://console.cloud.google.com/project/_/billing/enable) for that project on GCP, otherwise you will receive the following error:
+
+![](https://github.com/sbis04/flutter_maps/raw/master/screenshots/billing_error.png)
+
 * Clone the repository.
   
   ```bash
