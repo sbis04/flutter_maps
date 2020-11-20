@@ -33,8 +33,6 @@ class _MapViewState extends State<MapView> {
   CameraPosition _initialLocation = CameraPosition(target: LatLng(0.0, 0.0));
   GoogleMapController mapController;
 
-  final Geolocator _geolocator = Geolocator();
-
   Position _currentPosition;
   String _currentAddress;
 
@@ -476,13 +474,13 @@ class _MapViewState extends State<MapView> {
 
                                     _calculateDistance().then((isCalculated) {
                                       if (isCalculated) {
-                                        _scaffoldKey.currentState.showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text('Distance Calculated Sucessfully'),
                                           ),
                                         );
                                       } else {
-                                        _scaffoldKey.currentState.showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text('Error Calculating Distance'),
                                           ),
