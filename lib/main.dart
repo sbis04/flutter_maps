@@ -83,7 +83,7 @@ class _MapViewState extends State<MapView> {
               Radius.circular(10.0),
             ),
             borderSide: BorderSide(
-              color: Colors.grey[400],
+              color: Colors.grey.shade400,
               width: 2,
             ),
           ),
@@ -92,7 +92,7 @@ class _MapViewState extends State<MapView> {
               Radius.circular(10.0),
             ),
             borderSide: BorderSide(
-              color: Colors.blue[300],
+              color: Colors.blue.shade300,
               width: 2,
             ),
           ),
@@ -128,8 +128,8 @@ class _MapViewState extends State<MapView> {
   // Method for retrieving the address
   _getAddress() async {
     try {
-      List<Placemark> p =
-          await placemarkFromCoordinates(_currentPosition.latitude, _currentPosition.longitude);
+      List<Placemark> p = await placemarkFromCoordinates(
+          _currentPosition.latitude, _currentPosition.longitude);
 
       Placemark place = p[0];
 
@@ -149,29 +149,34 @@ class _MapViewState extends State<MapView> {
     try {
       // Retrieving placemarks from addresses
       List<Location> startPlacemark = await locationFromAddress(_startAddress);
-      List<Location> destinationPlacemark = await locationFromAddress(_destinationAddress);
+      List<Location> destinationPlacemark =
+          await locationFromAddress(_destinationAddress);
 
       if (startPlacemark != null && destinationPlacemark != null) {
         // Use the retrieved coordinates of the current position,
         // instead of the address if the start position is user's
         // current position, as it results in better accuracy.
-        Position startCoordinates = _startAddress == _currentAddress
-            ? Position(latitude: _currentPosition.latitude, longitude: _currentPosition.longitude)
-            : Position(
-                latitude: startPlacemark[0].latitude, longitude: startPlacemark[0].longitude);
-        Position destinationCoordinates = Position(
-            latitude: destinationPlacemark[0].latitude,
-            longitude: destinationPlacemark[0].longitude);
+        double startLatitude = _startAddress == _currentAddress
+            ? _currentPosition.latitude
+            : startPlacemark[0].latitude;
+
+        double startLongitude = _startAddress == _currentAddress
+            ? _currentPosition.longitude
+            : startPlacemark[0].longitude;
+
+        double destinationLatitude = destinationPlacemark[0].latitude;
+        double destinationLongitude = destinationPlacemark[0].longitude;
+
+        String startCoordinatesString = '($startLatitude, $startLongitude)';
+        String destinationCoordinatesString =
+            '($destinationLatitude, $destinationLongitude)';
 
         // Start Location Marker
         Marker startMarker = Marker(
-          markerId: MarkerId('$startCoordinates'),
-          position: LatLng(
-            startCoordinates.latitude,
-            startCoordinates.longitude,
-          ),
+          markerId: MarkerId(startCoordinatesString),
+          position: LatLng(startLatitude, startLongitude),
           infoWindow: InfoWindow(
-            title: 'Start',
+            title: 'Start $startCoordinatesString',
             snippet: _startAddress,
           ),
           icon: BitmapDescriptor.defaultMarker,
@@ -179,13 +184,10 @@ class _MapViewState extends State<MapView> {
 
         // Destination Location Marker
         Marker destinationMarker = Marker(
-          markerId: MarkerId('$destinationCoordinates'),
-          position: LatLng(
-            destinationCoordinates.latitude,
-            destinationCoordinates.longitude,
-          ),
+          markerId: MarkerId(destinationCoordinatesString),
+          position: LatLng(destinationLatitude, destinationLongitude),
           infoWindow: InfoWindow(
-            title: 'Destination',
+            title: 'Destination $destinationCoordinatesString',
             snippet: _destinationAddress,
           ),
           icon: BitmapDescriptor.defaultMarker,
@@ -195,43 +197,41 @@ class _MapViewState extends State<MapView> {
         markers.add(startMarker);
         markers.add(destinationMarker);
 
-        print('START COORDINATES: $startCoordinates');
-        print('DESTINATION COORDINATES: $destinationCoordinates');
-
-        Position _northeastCoordinates;
-        Position _southwestCoordinates;
+        print(
+          'START COORDINATES: ($startLatitude, $startLongitude)',
+        );
+        print(
+          'DESTINATION COORDINATES: ($destinationLatitude, $destinationLongitude)',
+        );
 
         // Calculating to check that the position relative
         // to the frame, and pan & zoom the camera accordingly.
-        double miny = (startCoordinates.latitude <= destinationCoordinates.latitude)
-            ? startCoordinates.latitude
-            : destinationCoordinates.latitude;
-        double minx = (startCoordinates.longitude <= destinationCoordinates.longitude)
-            ? startCoordinates.longitude
-            : destinationCoordinates.longitude;
-        double maxy = (startCoordinates.latitude <= destinationCoordinates.latitude)
-            ? destinationCoordinates.latitude
-            : startCoordinates.latitude;
-        double maxx = (startCoordinates.longitude <= destinationCoordinates.longitude)
-            ? destinationCoordinates.longitude
-            : startCoordinates.longitude;
+        double miny = (startLatitude <= destinationLatitude)
+            ? startLatitude
+            : destinationLatitude;
+        double minx = (startLongitude <= destinationLongitude)
+            ? startLongitude
+            : destinationLongitude;
+        double maxy = (startLatitude <= destinationLatitude)
+            ? destinationLatitude
+            : startLatitude;
+        double maxx = (startLongitude <= destinationLongitude)
+            ? destinationLongitude
+            : startLongitude;
 
-        _southwestCoordinates = Position(latitude: miny, longitude: minx);
-        _northeastCoordinates = Position(latitude: maxy, longitude: maxx);
+        double southWestLatitude = miny;
+        double southWestLongitude = minx;
+
+        double northEastLatitude = maxy;
+        double northEastLongitude = maxx;
 
         // Accommodate the two locations within the
         // camera view of the map
         mapController.animateCamera(
           CameraUpdate.newLatLngBounds(
             LatLngBounds(
-              northeast: LatLng(
-                _northeastCoordinates.latitude,
-                _northeastCoordinates.longitude,
-              ),
-              southwest: LatLng(
-                _southwestCoordinates.latitude,
-                _southwestCoordinates.longitude,
-              ),
+              northeast: LatLng(northEastLatitude, northEastLongitude),
+              southwest: LatLng(southWestLatitude, southWestLongitude),
             ),
             100.0,
           ),
@@ -246,7 +246,8 @@ class _MapViewState extends State<MapView> {
         //   destinationCoordinates.longitude,
         // );
 
-        await _createPolylines(startCoordinates, destinationCoordinates);
+        await _createPolylines(startLatitude, startLongitude,
+            destinationLatitude, destinationLongitude);
 
         double totalDistance = 0.0;
 
@@ -286,12 +287,17 @@ class _MapViewState extends State<MapView> {
   }
 
   // Create the polylines for showing the route between two places
-  _createPolylines(Position start, Position destination) async {
+  _createPolylines(
+    double startLatitude,
+    double startLongitude,
+    double destinationLatitude,
+    double destinationLongitude,
+  ) async {
     polylinePoints = PolylinePoints();
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
       Secrets.API_KEY, // Google Maps API Key
-      PointLatLng(start.latitude, start.longitude),
-      PointLatLng(destination.latitude, destination.longitude),
+      PointLatLng(startLatitude, startLongitude),
+      PointLatLng(destinationLatitude, destinationLongitude),
       travelMode: TravelMode.transit,
     );
 
@@ -351,7 +357,7 @@ class _MapViewState extends State<MapView> {
                   children: <Widget>[
                     ClipOval(
                       child: Material(
-                        color: Colors.blue[100], // button color
+                        color: Colors.blue.shade100, // button color
                         child: InkWell(
                           splashColor: Colors.blue, // inkwell color
                           child: SizedBox(
@@ -370,7 +376,7 @@ class _MapViewState extends State<MapView> {
                     SizedBox(height: 20),
                     ClipOval(
                       child: Material(
-                        color: Colors.blue[100], // button color
+                        color: Colors.blue.shade100, // button color
                         child: InkWell(
                           splashColor: Colors.blue, // inkwell color
                           child: SizedBox(
@@ -459,14 +465,16 @@ class _MapViewState extends State<MapView> {
                             ),
                           ),
                           SizedBox(height: 5),
-                          RaisedButton(
-                            onPressed: (_startAddress != '' && _destinationAddress != '')
+                          ElevatedButton(
+                            onPressed: (_startAddress != '' &&
+                                    _destinationAddress != '')
                                 ? () async {
                                     startAddressFocusNode.unfocus();
                                     desrinationAddressFocusNode.unfocus();
                                     setState(() {
                                       if (markers.isNotEmpty) markers.clear();
-                                      if (polylines.isNotEmpty) polylines.clear();
+                                      if (polylines.isNotEmpty)
+                                        polylines.clear();
                                       if (polylineCoordinates.isNotEmpty)
                                         polylineCoordinates.clear();
                                       _placeDistance = null;
@@ -474,25 +482,29 @@ class _MapViewState extends State<MapView> {
 
                                     _calculateDistance().then((isCalculated) {
                                       if (isCalculated) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('Distance Calculated Sucessfully'),
+                                            content: Text(
+                                                'Distance Calculated Sucessfully'),
                                           ),
                                         );
                                       } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('Error Calculating Distance'),
+                                            content: Text(
+                                                'Error Calculating Distance'),
                                           ),
                                         );
                                       }
                                     });
                                   }
                                 : null,
-                            color: Colors.red,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20.0),
-                            ),
+                            // color: Colors.red,
+                            // shape: RoundedRectangleBorder(
+                            //   borderRadius: BorderRadius.circular(20.0),
+                            // ),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
@@ -519,7 +531,7 @@ class _MapViewState extends State<MapView> {
                   padding: const EdgeInsets.only(right: 10.0, bottom: 10.0),
                   child: ClipOval(
                     child: Material(
-                      color: Colors.orange[100], // button color
+                      color: Colors.orange.shade100, // button color
                       child: InkWell(
                         splashColor: Colors.orange, // inkwell color
                         child: SizedBox(
