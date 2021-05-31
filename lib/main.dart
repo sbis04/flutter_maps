@@ -148,8 +148,8 @@ class _MapViewState extends State<MapView> {
   Future<bool> _calculateDistance() async {
     try {
       // Retrieving placemarks from addresses
-      List<Location>? startPlacemark = await locationFromAddress(_startAddress);
-      List<Location>? destinationPlacemark =
+      List<Location> startPlacemark = await locationFromAddress(_startAddress);
+      List<Location> destinationPlacemark =
           await locationFromAddress(_destinationAddress);
 
       // Use the retrieved coordinates of the current position,
@@ -238,11 +238,11 @@ class _MapViewState extends State<MapView> {
 
       // Calculating the distance between the start and the end positions
       // with a straight path, without considering any route
-      // double distanceInMeters = await Geolocator().bearingBetween(
-      //   startCoordinates.latitude,
-      //   startCoordinates.longitude,
-      //   destinationCoordinates.latitude,
-      //   destinationCoordinates.longitude,
+      // double distanceInMeters = await Geolocator.bearingBetween(
+      //   startLatitude,
+      //   startLongitude,
+      //   destinationLatitude,
+      //   destinationLongitude,
       // );
 
       await _createPolylines(startLatitude, startLongitude, destinationLatitude,
@@ -499,10 +499,6 @@ class _MapViewState extends State<MapView> {
                                     });
                                   }
                                 : null,
-                            // color: Colors.red,
-                            // shape: RoundedRectangleBorder(
-                            //   borderRadius: BorderRadius.circular(20.0),
-                            // ),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
@@ -511,6 +507,12 @@ class _MapViewState extends State<MapView> {
                                   color: Colors.white,
                                   fontSize: 20.0,
                                 ),
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              primary: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
                               ),
                             ),
                           ),
