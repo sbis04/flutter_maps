@@ -484,7 +484,7 @@ class _MapViewState extends State<MapView> {
                                             .showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                                'Distance Calculated Sucessfully'),
+                                                'Distance Calculated Successfully'),
                                           ),
                                         );
                                       } else {
